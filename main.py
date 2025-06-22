@@ -1,8 +1,8 @@
 
 import sys
 import argparse
-from utils.parser import parse_logs
-from utils.highlighter import highlight_keywords
+from untils.parser import parse_logs
+from untils.highlighter import highlight_keywords
 
 def main():
     parser = argparse.ArgumentParser(description="Zuan Log Analyzer CLI")
