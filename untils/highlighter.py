@@ -1,6 +1,8 @@
 
 from termcolor import colored
 
+FAIL_KEYWORDS = ["fail", "error", "crash", "recovery", "panic", "timeout"]
+
 KEYWORDS = ["error", "fail", "boot", "recovery", "panic", "timeout", "crash"]
 
 def highlight_keywords(lines):
