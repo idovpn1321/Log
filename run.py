@@ -60,16 +60,11 @@ class LinuxLogSeeker:
         self.setup_logging()
         self.current_file = ""
         self.current_results = []
-        
-        # Linux-specific initialization
         self.setup_linux_environment()
 
     def setup_linux_environment(self):
         """Linux-specific setup"""
-        # Set WM_CLASS for proper window management
         self.root.wm_class("ZuanLogSeekr")
-        
-        # Use CSD if available
         try:
             self.root.attributes('-type', 'dialog')
         except:
@@ -97,7 +92,7 @@ class LinuxLogSeeker:
         main_frame = ttk.Frame(self.root, padding=12)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Header bar inspired by GNOME
+        # Header bar
         header_frame = ttk.Frame(main_frame)
         header_frame.pack(fill=tk.X, pady=(0, 12))
         
@@ -186,26 +181,21 @@ class LinuxLogSeeker:
         )
         status_bar.pack(fill=tk.X, pady=(6, 0))
         
-        # Apply theme colors
         self.apply_theme_colors()
 
     def apply_theme_colors(self):
         """Apply Material You colors to all widgets"""
         style = ttk.Style()
-        
-        # Configure styles
         style.configure(
             '.',
             background=self.theme['background'],
             foreground=self.theme['text'],
             font=('Cantarell 10')
         )
-        
         style.configure(
             'TFrame',
             background=self.theme['background']
         )
-        
         style.configure(
             'TButton',
             background=self.theme['primary'],
@@ -214,14 +204,11 @@ class LinuxLogSeeker:
             focuscolor=self.theme['primary'] + '30',
             padding=6
         )
-        
         style.map(
             'TButton',
             background=[('active', self.theme['primary'] + 'CC')],
             bordercolor=[('active', self.theme['primary'] + 'CC')]
         )
-        
-        # Configure entry widget
         style.configure(
             'TEntry',
             fieldbackground=self.theme['surface'],
@@ -238,15 +225,11 @@ class LinuxLogSeeker:
         new_theme = 'light' if current_theme == 'dark' else 'dark'
         self.theme = MaterialYouTheme.get_theme(new_theme)
         self.apply_theme_colors()
-        
-        # Update text widget colors
         self.result_text.configure(
             bg=self.theme['surface'],
             fg=self.theme['text'],
             insertbackground=self.theme['text']
         )
-        
-        # Re-apply text tags with new colors
         tags_config = {
             'ERROR': {'foreground': self.theme['error']},
             'WARNING': {'foreground': self.theme['warning']},
@@ -254,23 +237,81 @@ class LinuxLogSeeker:
             'SUCCESS': {'foreground': self.theme['success']},
             'HEADER': {'foreground': self.theme['primary']}
         }
-        
         for tag, config in tags_config.items():
             self.result_text.tag_config(tag, **config)
-        
         self.status_var.set(f"Switched to {new_theme} mode")
 
-    # ... [Keep all other methods from previous version] ...
+    def browse_file(self):
+        """Open file dialog"""
+        filepath = filedialog.askopenfilename(
+            title="Select File",
+            filetypes=[
+                ("Log Files", "*.log"),
+                ("Python Files", "*.py"),
+                ("Text Files", "*.txt"),
+                ("All Files", "*.*")
+            ]
+        )
+        if filepath:
+            self.current_file = filepath
+            self.file_label.config(text=os.path.basename(filepath))
+            self.status_var.set(f"Selected: {os.path.basename(filepath)}")
+
+    def analyze_file(self):
+        """Analyze the selected file"""
+        if not self.current_file:
+            messagebox.showwarning("No File", "Please select a file first")
+            return
+        
+        try:
+            self.current_results = []
+            with open(self.current_file, 'r', encoding='utf-8', errors='ignore') as f:
+                for line_num, line in enumerate(f, 1):
+                    stripped_line = line.strip()
+                    if not stripped_line:
+                        continue
+                    
+                    # Detect issues (simplified example)
+                    if 'error' in line.lower():
+                        self.current_results.append(('ERROR', line_num, line))
+                    elif 'warn' in line.lower():
+                        self.current_results.append(('WARNING', line_num, line))
+            
+            self.display_results()
+        
+        except Exception as e:
+            self.handle_error(f"Analysis error: {str(e)}")
+
+    def display_results(self):
+        """Display analysis results"""
+        self.result_text.delete(1.0, tk.END)
+        
+        if not self.current_results:
+            self.result_text.insert(tk.END, "✅ No issues found\n", "SUCCESS")
+            self.status_var.set("Analysis complete - No issues found")
+            return
+        
+        self.result_text.insert(tk.END, f"Analysis of: {os.path.basename(self.current_file)}\n\n", "HEADER")
+        
+        for level, line_num, line in self.current_results:
+            self.result_text.insert(tk.END, f"[{level}] Line {line_num}:\n", level)
+            self.result_text.insert(tk.END, f"{line}\n\n", level)
+        
+        self.status_var.set(f"Found {len(self.current_results)} issues")
+
+    def handle_error(self, error_msg):
+        """Error handling"""
+        messagebox.showerror("Error", error_msg)
+        self.status_var.set(error_msg)
+        self.result_text.delete(1.0, tk.END)
+        self.result_text.insert(tk.END, error_msg, "ERROR")
 
 if __name__ == "__main__":
     root = tk.Tk()
-    
-    # Set GNOME-friendly window attributes
     try:
-        root.attributes('-zoomed', False)  # Don't start maximized
+        root.attributes('-zoomed', False)
         root.attributes('-type', 'normal')
     except:
         pass
-    
     app = LinuxLogSeeker(root)
     root.mainloop()
