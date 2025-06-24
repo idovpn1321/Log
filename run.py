@@ -17,6 +17,7 @@ ERROR_KEYWORDS = [
 class LogSeekerApp:
     def __init__(self, root):
         self.root = root
+        self.style = Style(theme='darkly')  # Create Style instance first
         self.setup_ui()
         self.setup_logging()
         
@@ -33,7 +34,6 @@ class LogSeekerApp:
         """Setup the main application UI"""
         self.root.title("ZuanLogSeekr v3 - Universal Error Detector")
         self.root.geometry("900x650")
-        self.style = Style(theme='darkly')
         
         # Main container
         main_frame = ttk.Frame(self.root, padding=10)
@@ -53,7 +53,7 @@ class LogSeekerApp:
             control_frame, 
             text="Browse", 
             command=self.browse_file,
-            bootstyle="primary-outline"
+            style='primary.TButton'
         )
         browse_btn.grid(row=0, column=2, padx=5)
         
@@ -62,18 +62,21 @@ class LogSeekerApp:
             control_frame,
             text="Scan Errors",
             command=self.scan_log,
-            bootstyle="danger"
+            style='danger.TButton'
         )
         scan_btn.grid(row=0, column=3, padx=5)
         
         # Theme selection
         ttk.Label(control_frame, text="Theme:").grid(row=1, column=0, sticky=tk.W, pady=(10,0))
         self.theme_var = tk.StringVar(value='darkly')
+        
+        # Get theme names from the Style instance we created
+        theme_names = self.style.theme_names()
         theme_menu = ttk.OptionMenu(
             control_frame,
             self.theme_var,
             'darkly',
-            *Style.theme_names(),
+            *theme_names,
             command=self.change_theme
         )
         theme_menu.grid(row=1, column=1, sticky=tk.W, pady=(10,0))
@@ -106,7 +109,7 @@ class LogSeekerApp:
             anchor=tk.W
         )
         status_bar.pack(fill=tk.X, pady=(5,0))
-        
+    
     def browse_file(self):
         """Open file dialog to select log file"""
         filepath = filedialog.askopenfilename(
@@ -122,7 +125,7 @@ class LogSeekerApp:
         """Scan the log file for errors"""
         filepath = self.file_var.get()
         if not filepath:
-            ttk.dialogs.Messagebox.show_warning("Missing File", "Please select a valid log file.")
+            tk.messagebox.showwarning("Missing File", "Please select a valid log file.")
             logging.warning("Scan attempted without file selection")
             return
 
@@ -160,17 +163,17 @@ class LogSeekerApp:
 
         except FileNotFoundError:
             error_msg = f"File not found: {filepath}"
-            ttk.dialogs.Messagebox.show_error("File Error", error_msg)
+            tk.messagebox.showerror("File Error", error_msg)
             logging.error(error_msg)
             self.status_var.set("Error: File not found")
         except PermissionError:
             error_msg = f"Permission denied when accessing: {filepath}"
-            ttk.dialogs.Messagebox.show_error("File Error", error_msg)
+            tk.messagebox.showerror("File Error", error_msg)
             logging.error(error_msg)
             self.status_var.set("Error: Permission denied")
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
-            ttk.dialogs.Messagebox.show_error("File Error", error_msg)
+            tk.messagebox.showerror("File Error", error_msg)
             logging.error(error_msg, exc_info=True)
             self.status_var.set("Error: Processing failed")
     
