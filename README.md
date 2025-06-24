@@ -85,7 +85,8 @@ Examples of recognized patterns:
 
 ## 📸 Screenshots
 
-> Upload a screenshot and replace the placeholder link above with your image.
+> 
+![Screenshot_2025-06-24_18-19-34](https://github.com/user-attachments/assets/cc3d12b5-3330-4f71-890e-e97194560ebb)
 
 ---
 
