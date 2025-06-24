@@ -1,149 +1,106 @@
 ---
 
-## 🛠️ Usage Guide
+````markdown
+# 🔍 Enhanced Log Seeker
 
-Zuan Log Analyzer is a CLI-based tool that helps you extract, filter, and highlight important log information — especially errors, crashes, and bootloop traces — from raw Android logs like `logcat`, `dmesg`, etc.
+**Enhanced Log Seeker** is a modern Python GUI tool designed for analyzing log files from Android ROM and kernel build processes. With smart detection and a clean interface, it helps developers quickly identify critical issues in logs.
+
+![screenshot](https://i.imgur.com/your_screenshot.png) <!-- Replace with actual screenshot URL -->
 
 ---
 
-### ▶️ Basic Command
+## ✨ Features
+
+- 🚨 **Smart Detection** of over 20+ issue categories:
+  - Kernel errors, SELinux violations, GApps failures, Soong/Ninja build issues, and more.
+- 🌒 **Modern Dark Theme** inspired by Orchis GTK
+- 📊 **Real-time Statistics** with severity-level breakdown
+- 🔍 **Filter by Issue Level** (ERROR, WARNING, INFO, etc.)
+- ⚡ **Context-aware Analysis** for Android ROM logs
+- 🖱️ **Right-click Menu** for copying, searching similar logs
+- 💾 **Export Results** to `.txt` or clipboard
+- ⌨️ **Keyboard Shortcuts**:
+  - `Ctrl+O`: Open File
+  - `Ctrl+R` / `F5`: Run Analysis
+  - `Ctrl+S`: Export Report
+  - `Ctrl+Q`: Exit App
+
+---
+
+## 🚀 How to Use
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/idovpn1321/Log.git
+cd Log
+````
+
+### 2. Run the App
 
 ```bash
-python3 main.py <log_file1> <log_file2> ...
+python3 run.py
+```
 
-Supports one or multiple log files.
-
-Will print all lines, with important keywords highlighted in red.
-
-
+> Make sure you're using **Python 3.6+**
 
 ---
 
-🎯 Filter by Custom Pattern
+## 📂 Supported File Types
 
-python3 main.py logcat.txt --pattern "bootloop"
+* `.log`, `.txt`, `.py`, `.mk`, and `.rc` files
+* Build logs from:
 
-Shows only the lines that contain the specified keyword (case-insensitive).
-
-Useful for searching a specific error message, tag, or event.
-
-
-
----
-
-🚨 Show Only Failure-Related Lines
-
-python3 main.py logcat.txt --fail-only
-
-Filters output to only show lines that contain critical failure-related keywords, such as:
-
-fail
-
-error
-
-crash
-
-recovery
-
-panic
-
-timeout
-
-
-These are defined in the tool's FAIL_KEYWORDS list and can be modified manually in utils/highlighter.py.
-
-
+  * AOSP / LineageOS / GKI / KernelSU
+  * `repo sync`, `make`, `ninja`, etc.
+* Generic Android logs (e.g., `logcat`, `dmesg`)
 
 ---
 
-🧪 Quick Testing with Dummy Logs
+## 🧠 Log Detection System
 
-To simulate and test the tool:
+Each line is scanned with advanced pattern matching and keyword detection.
+Examples of recognized patterns:
 
-echo -e "Booting device...\nSystem crash detected\nRestarting to recovery" > test.txt
-python3 main.py test.txt --fail-only
-
-
----
-
-📌 All Available Options
-
-Option	Description
-
-<files>	One or more log files to process
---pattern	Filter logs using a custom string/pattern (case-insensitive)
---fail-only	Only show lines with known failure keywords
-
-
-You can combine options:
-
-python3 main.py log.txt --pattern crash --fail-only
-
-⚠️ In that case, the --fail-only filter will take precedence.
-
+* `fatal error: missing file`
+* `selinux denied`
+* `undefined reference`
+* `ninja: build stopped`
+* `make: *** [target] Error`
 
 ---
 
-🧼 Highlighting Behavior
+## 📁 Project Structure
 
-All important terms like error, fail, recovery, etc., will be automatically colored red using the termcolor module.
-
-Output is designed to be terminal-friendly.
-
-
-
----
-
-💾 Saving the Output
-
-To save the filtered results to a file:
-
-python3 main.py logcat.txt --fail-only > results.txt
-
+```
+.
+├── run.py                   # Main GUI application
+├── rom_detection_levels.py  # Android-specific log analysis engine
+├── README.md
+```
 
 ---
 
-❓ When Should You Use This?
+## 👨‍💻 Developer
 
-You're debugging Android system issues like bootloops, crashes, or app force closes.
-
-You want to extract only the failure lines from a huge log file.
-
-You prefer using Termux or any minimal terminal without heavy GUI tools.
-
-
+* **Author:** [@idovpn1321 (Zuan)](https://github.com/idovpn1321)
+* **Contributions:** Pull requests are welcome!
 
 ---
 
-🧱 Dependencies
+## 📸 Screenshots
 
-Python 3.x
-
-termcolor
-
-
-Install with:
-
-pip install termcolor
-
+> Upload a screenshot and replace the placeholder link above with your image.
 
 ---
 
-🗃️ Folder Structure
+## ☕ Support
 
-ZuanLogAnalyzer/
-├── main.py                 # Main CLI entry point
-└── utils/
-    ├── __init__.py
-    ├── parser.py           # Splits logs into lines
-    └── highlighter.py      # Highlights & filters keywords
-
+This project was built with passion (and late nights of debugging Android logs).
+If it helps you, feel free to give it a ⭐️ or [share your feedback](https://github.com/idovpn1321/Log/issues)!
 
 ---
 
-If you need a versioned CLI flag like --version, or want to convert this tool into a pip-installable Python package (setup.py etc.), I can help you modularize and package it as well.
+## 📜 License
 
----
-
-Let me know if you'd like a badge section (`GitHub Actions`, `PyPI`, etc.), a license section, or even a demo GIF previewing the tool in action — those are nice touches for public GitHub projects.
-
+MIT License — free for personal or commercial use.
+Fork it, improve it, share it. Just don’t forget to credit 😉
