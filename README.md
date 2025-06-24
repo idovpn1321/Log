@@ -1,11 +1,10 @@
 ---
 
-````markdown
+````
+markdown
 # 🔍 Enhanced Log Seeker
 
 **Enhanced Log Seeker** is a modern Python GUI tool designed for analyzing log files from Android ROM and kernel build processes. With smart detection and a clean interface, it helps developers quickly identify critical issues in logs.
-
-![screenshot](https://i.imgur.com/your_screenshot.png) <!-- Replace with actual screenshot URL -->
 
 ---
 
