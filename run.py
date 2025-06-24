@@ -13,6 +13,7 @@ class LogSeekerApp:
         self.setup_logging()
         self.setup_ui()
         self.scan_mode = "log"  # Default mode: 'log' or 'code'
+        self.current_results = []  # Store current scan results
         
     def setup_logging(self):
         """Configure logging for the application"""
@@ -76,6 +77,17 @@ class LogSeekerApp:
             style='danger.TButton'
         )
         scan_btn.grid(row=0, column=5, padx=5)
+        
+        # Copy button
+        copy_btn = ttk.Button(
+            control_frame,
+            text="Copy Errors",
+            command=self.copy_errors,
+            style='info.TButton',
+            state='disabled'
+        )
+        copy_btn.grid(row=0, column=6, padx=5)
+        self.copy_btn = copy_btn  # Save reference to enable/disable later
         
         # Theme selection
         ttk.Label(control_frame, text="Theme:").grid(row=1, column=0, sticky=tk.W, pady=(10,0))
@@ -174,7 +186,7 @@ class LogSeekerApp:
                             
                         # Different processing for log vs code files
                         if self.scan_mode == 'log':
-                            issues = self._scan_log_line(stripped_line)
+                            issues = self._scan_log_line(stripped_line, line_num)
                         else:
                             issues = self._scan_code_line(stripped_line, line_num)
                             
@@ -188,7 +200,10 @@ class LogSeekerApp:
                         logging.error(f"Error processing line {line_num}: {e}")
                         continue
 
+            self.current_results = found_lines  # Store results for copying
             self._display_results(found_lines, filepath)
+            # Enable copy button if we found results
+            self.copy_btn['state'] = 'normal' if found_lines else 'disabled'
 
         except FileNotFoundError:
             self._handle_error(f"File not found: {filepath}", "Error: File not found")
@@ -197,7 +212,7 @@ class LogSeekerApp:
         except Exception as e:
             self._handle_error(f"Unexpected error: {str(e)}", "Error: Processing failed")
     
-    def _scan_log_line(self, line):
+    def _scan_log_line(self, line, line_num):
         """Scan a single log line for issues"""
         issues = []
         line_lower = line.lower()
@@ -286,6 +301,25 @@ class LogSeekerApp:
             self.status_var.set("Scan complete. No issues found.")
             logging.info(f"Scan completed - no issues found in {filepath}")
     
+    def copy_errors(self):
+        """Copy all detected errors to clipboard"""
+        if not self.current_results:
+            messagebox.showwarning("No Results", "No errors to copy. Please scan a file first.")
+            return
+        
+        # Prepare text to copy
+        copy_text = "Detected Errors/Warnings:\n\n"
+        for line_num, line, error_type in self.current_results:
+            copy_text += f"[{error_type.upper()}] Line {line_num}: {line}\n"
+        
+        # Copy to clipboard
+        self.root.clipboard_clear()
+        self.root.clipboard_append(copy_text)
+        self.root.update()  # Required to finalize the clipboard update
+        
+        messagebox.showinfo("Copied", "All detected errors/warnings have been copied to clipboard.")
+        logging.info("Errors copied to clipboard")
+    
     def _handle_error(self, error_msg, status_msg):
         """Handle and display errors"""
         messagebox.showerror("File Error", error_msg)
@@ -293,6 +327,7 @@ class LogSeekerApp:
         self.status_var.set(status_msg)
         self.result_text.delete(1.0, tk.END)
         self.result_text.insert(tk.END, error_msg, "error")
+        self.copy_btn['state'] = 'disabled'  # Disable copy button on error
     
     def change_theme(self, theme):
         """Change the application theme"""
