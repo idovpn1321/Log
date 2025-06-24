@@ -4,74 +4,44 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext
 import logging
 import os
 import re
-import subprocess
 from datetime import datetime
 
-class MaterialYouTheme:
-    @staticmethod
-    def get_gnome_color_scheme():
-        """Detect GNOME dark/light mode"""
-        try:
-            result = subprocess.run(
-                ['gsettings', 'get', 'org.gnome.desktop.interface', 'color-scheme'],
-                capture_output=True, text=True
-            )
-            if 'dark' in result.stdout.lower():
-                return 'dark'
-        except:
-            pass
-        return 'light'
-
-    @staticmethod
-    def get_theme(theme_mode):
-        """Material You colors matching GNOME's Adwaita palette"""
-        return {
-            'dark': {
-                'primary': '#3584e4',  # GNOME blue
-                'surface': '#242424',
-                'background': '#1e1e1e',
-                'error': '#ff7b63',
-                'warning': '#ffbe6f',
-                'info': '#41a6b5',
-                'success': '#8ff0a4',
-                'text': '#ffffff',
-                'secondary': '#deddda'
-            },
+class LinuxLogSeeker:
+    def __init__(self, root):
+        self.root = root
+        self.current_file = ""
+        self.current_results = []
+        
+        # Initialize with light theme by default
+        self.theme_mode = 'light'  
+        self.themes = {
             'light': {
                 'primary': '#1a5fb4',  # GNOME blue
                 'surface': '#ffffff',
                 'background': '#f6f5f4',
                 'error': '#c01c28',
                 'warning': '#e5a50a',
-                'info': '#1a5fb4',
                 'success': '#26a269',
                 'text': '#241f31',
                 'secondary': '#5e5c64'
+            },
+            'dark': {
+                'primary': '#3584e4',  # GNOME blue
+                'surface': '#242424',
+                'background': '#1e1e1e',
+                'error': '#ff7b63',
+                'warning': '#ffbe6f',
+                'success': '#8ff0a4',
+                'text': '#ffffff',
+                'secondary': '#deddda'
             }
-        }[theme_mode]
-
-class LinuxLogSeeker:
-    def __init__(self, root):
-        self.root = root
-        self.theme = MaterialYouTheme.get_theme(
-            MaterialYouTheme.get_gnome_color_scheme()
-        )
+        }
+        
         self.setup_ui()
         self.setup_logging()
-        self.current_file = ""
-        self.current_results = []
-        self.setup_linux_environment()
-
-    def setup_linux_environment(self):
-        """Linux-specific setup"""
-        self.root.wm_class("ZuanLogSeekr")
-        try:
-            self.root.attributes('-type', 'dialog')
-        except:
-            pass
 
     def setup_logging(self):
-        """Linux-appropriate logging"""
+        """Configure logging for Linux"""
         log_dir = os.path.expanduser("~/.local/share/zuanlogseeker")
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
@@ -81,10 +51,10 @@ class LinuxLogSeeker:
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
-        logging.info("Linux Log Seeker started")
+        logging.info("Application started")
 
     def setup_ui(self):
-        """GTK-inspired Material You interface"""
+        """GNOME-inspired UI that works on XFCE"""
         self.root.title("ZuanLogSeekr for Linux")
         self.root.geometry("1000x700")
         
@@ -99,8 +69,8 @@ class LinuxLogSeeker:
         ttk.Label(
             header_frame,
             text="ZuanLogSeekr",
-            font=('Cantarell 11 bold'),
-            foreground=self.theme['primary']
+            font=('Sans 11 bold'),
+            foreground=self.themes[self.theme_mode]['primary']
         ).pack(side=tk.LEFT)
         
         # Theme toggle button
@@ -120,15 +90,14 @@ class LinuxLogSeeker:
         file_btn = ttk.Button(
             control_frame,
             text="Open File",
-            command=self.browse_file,
-            style='primary.TButton'
+            command=self.browse_file
         )
         file_btn.pack(side=tk.LEFT, padx=4)
         
         self.file_label = ttk.Label(
             control_frame,
             text="No file selected",
-            foreground=self.theme['secondary']
+            foreground=self.themes[self.theme_mode]['secondary']
         )
         self.file_label.pack(side=tk.LEFT, padx=8)
         
@@ -136,8 +105,7 @@ class LinuxLogSeeker:
         analyze_btn = ttk.Button(
             control_frame,
             text="Analyze",
-            command=self.analyze_file,
-            style='primary.TButton'
+            command=self.analyze_file
         )
         analyze_btn.pack(side=tk.RIGHT, padx=4)
         
@@ -145,29 +113,19 @@ class LinuxLogSeeker:
         self.result_text = scrolledtext.ScrolledText(
             main_frame,
             wrap=tk.WORD,
-            font=('Cantarell 10'),
+            font=('Monospace 10'),
             height=25,
             padx=12,
             pady=12,
-            bg=self.theme['surface'],
-            fg=self.theme['text'],
-            insertbackground=self.theme['text'],
-            selectbackground=self.theme['primary'],
+            bg=self.themes[self.theme_mode]['surface'],
+            fg=self.themes[self.theme_mode]['text'],
+            insertbackground=self.themes[self.theme_mode]['text'],
             relief=tk.FLAT
         )
         self.result_text.pack(fill=tk.BOTH, expand=True)
         
         # Configure text tags
-        tags_config = {
-            'ERROR': {'foreground': self.theme['error'], 'font': 'Cantarell 10 bold'},
-            'WARNING': {'foreground': self.theme['warning'], 'font': 'Cantarell 10 bold'},
-            'INFO': {'foreground': self.theme['info'], 'font': 'Cantarell 10'},
-            'SUCCESS': {'foreground': self.theme['success'], 'font': 'Cantarell 10 bold'},
-            'HEADER': {'foreground': self.theme['primary'], 'font': 'Cantarell 12 bold'}
-        }
-        
-        for tag, config in tags_config.items():
-            self.result_text.tag_config(tag, **config)
+        self.setup_text_tags()
         
         # Status bar
         self.status_var = tk.StringVar(value="Ready to analyze files")
@@ -176,70 +134,62 @@ class LinuxLogSeeker:
             textvariable=self.status_var,
             relief=tk.FLAT,
             anchor=tk.W,
-            font=('Cantarell 9'),
-            foreground=self.theme['secondary']
+            font=('Sans 9'),
+            foreground=self.themes[self.theme_mode]['secondary']
         )
         status_bar.pack(fill=tk.X, pady=(6, 0))
         
-        self.apply_theme_colors()
+        self.apply_theme()
 
-    def apply_theme_colors(self):
-        """Apply Material You colors to all widgets"""
+    def setup_text_tags(self):
+        """Configure text display styles"""
+        tags_config = {
+            'ERROR': {'foreground': self.themes[self.theme_mode]['error'], 'font': 'Monospace 10 bold'},
+            'WARNING': {'foreground': self.themes[self.theme_mode]['warning'], 'font': 'Monospace 10 bold'},
+            'INFO': {'foreground': self.themes[self.theme_mode]['primary'], 'font': 'Monospace 10'},
+            'SUCCESS': {'foreground': self.themes[self.theme_mode]['success'], 'font': 'Monospace 10 bold'},
+            'HEADER': {'foreground': self.themes[self.theme_mode]['primary'], 'font': 'Sans 12 bold'}
+        }
+        
+        for tag, config in tags_config.items():
+            self.result_text.tag_config(tag, **config)
+
+    def apply_theme(self):
+        """Apply the current theme colors"""
+        theme = self.themes[self.theme_mode]
+        
+        # Configure styles
         style = ttk.Style()
         style.configure(
             '.',
-            background=self.theme['background'],
-            foreground=self.theme['text'],
-            font=('Cantarell 10')
+            background=theme['background'],
+            foreground=theme['text'],
+            font=('Sans 10')
         )
-        style.configure(
-            'TFrame',
-            background=self.theme['background']
-        )
+        
         style.configure(
             'TButton',
-            background=self.theme['primary'],
+            background=theme['primary'],
             foreground='white',
-            bordercolor=self.theme['primary'],
-            focuscolor=self.theme['primary'] + '30',
-            padding=6
+            padding=6,
+            relief='flat'
         )
-        style.map(
-            'TButton',
-            background=[('active', self.theme['primary'] + 'CC')],
-            bordercolor=[('active', self.theme['primary'] + 'CC')]
+        
+        # Update widget colors
+        self.result_text.configure(
+            bg=theme['surface'],
+            fg=theme['text'],
+            insertbackground=theme['text']
         )
-        style.configure(
-            'TEntry',
-            fieldbackground=self.theme['surface'],
-            foreground=self.theme['text'],
-            insertcolor=self.theme['text'],
-            bordercolor=self.theme['secondary'],
-            lightcolor=self.theme['secondary'],
-            darkcolor=self.theme['secondary']
-        )
+        
+        self.file_label.config(foreground=theme['secondary'])
+        self.setup_text_tags()
 
     def toggle_theme(self):
-        """Switch between dark/light mode"""
-        current_theme = MaterialYouTheme.get_gnome_color_scheme()
-        new_theme = 'light' if current_theme == 'dark' else 'dark'
-        self.theme = MaterialYouTheme.get_theme(new_theme)
-        self.apply_theme_colors()
-        self.result_text.configure(
-            bg=self.theme['surface'],
-            fg=self.theme['text'],
-            insertbackground=self.theme['text']
-        )
-        tags_config = {
-            'ERROR': {'foreground': self.theme['error']},
-            'WARNING': {'foreground': self.theme['warning']},
-            'INFO': {'foreground': self.theme['info']},
-            'SUCCESS': {'foreground': self.theme['success']},
-            'HEADER': {'foreground': self.theme['primary']}
-        }
-        for tag, config in tags_config.items():
-            self.result_text.tag_config(tag, **config)
-        self.status_var.set(f"Switched to {new_theme} mode")
+        """Switch between light and dark themes"""
+        self.theme_mode = 'dark' if self.theme_mode == 'light' else 'light'
+        self.apply_theme()
+        self.status_var.set(f"Switched to {self.theme_mode} mode")
 
     def browse_file(self):
         """Open file dialog"""
@@ -271,11 +221,14 @@ class LinuxLogSeeker:
                     if not stripped_line:
                         continue
                     
-                    # Detect issues (simplified example)
-                    if 'error' in line.lower():
+                    # Simple detection logic - customize as needed
+                    line_lower = line.lower()
+                    if 'error' in line_lower:
                         self.current_results.append(('ERROR', line_num, line))
-                    elif 'warn' in line.lower():
+                    elif 'warn' in line_lower:
                         self.current_results.append(('WARNING', line_num, line))
+                    elif 'todo' in line_lower:
+                        self.current_results.append(('INFO', line_num, line))
             
             self.display_results()
         
@@ -308,10 +261,5 @@ class LinuxLogSeeker:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    try:
-        root.attributes('-zoomed', False)
-        root.attributes('-type', 'normal')
-    except:
-        pass
     app = LinuxLogSeeker(root)
     root.mainloop()
