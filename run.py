@@ -30,7 +30,7 @@ class LogSeekerApp:
     def setup_theme(self):
         """Configure Material You theme"""
         self.style = Style(theme="darkly")
-        self.style.configure(".", font=('Roboto', 10))
+        self.style.configure(".", font=('Helvetica', 10))
         
         # Apply colors
         self.root.configure(bg=MATERIAL_YOU["background"])
@@ -48,13 +48,7 @@ class LogSeekerApp:
             "TButton", 
             background=MATERIAL_YOU["primary"],
             foreground="white",
-            bordercolor=MATERIAL_YOU["primary"],
-            focuscolor=MATERIAL_YOU["primary"] + "30"  # Add transparency
-        )
-        self.style.map(
-            "TButton",
-            background=[("active", MATERIAL_YOU["primary"] + "DD")],
-            bordercolor=[("active", MATERIAL_YOU["primary"] + "DD")]
+            bordercolor=MATERIAL_YOU["primary"]
         )
 
     def setup_logging(self):
@@ -84,7 +78,7 @@ class LogSeekerApp:
         ttk.Label(
             header_frame,
             text="ZuanLogSeekr",
-            font=('Roboto', 18, 'bold'),
+            font=('Helvetica', 18, 'bold'),
             foreground=MATERIAL_YOU["primary"]
         ).pack(side=tk.LEFT, padx=10)
         
@@ -98,16 +92,14 @@ class LogSeekerApp:
         file_entry = ttk.Entry(
             control_frame, 
             textvariable=self.file_var, 
-            width=60,
-            style='TEntry'
+            width=60
         )
         file_entry.grid(row=0, column=1, padx=5, sticky=tk.W)
         
         browse_btn = ttk.Button(
             control_frame,
             text="📁 Browse",
-            command=self.browse_file,
-            style='TButton'
+            command=self.browse_file
         )
         browse_btn.grid(row=0, column=2, padx=5)
         
@@ -127,8 +119,7 @@ class LogSeekerApp:
         scan_btn = ttk.Button(
             control_frame,
             text="🔍 Scan",
-            command=self.scan_file,
-            style='TButton'
+            command=self.scan_file
         )
         scan_btn.grid(row=0, column=5, padx=5)
         
@@ -136,7 +127,6 @@ class LogSeekerApp:
             control_frame,
             text="📋 Copy",
             command=self.copy_to_clipboard,
-            style='TButton',
             state='disabled'
         )
         self.copy_btn.grid(row=0, column=6, padx=5)
@@ -148,19 +138,19 @@ class LogSeekerApp:
         self.result_text = scrolledtext.ScrolledText(
             results_frame,
             wrap=tk.WORD,
-            font=('Roboto', 10),
+            font=('Courier New', 10),
             height=25,
             padx=10,
             pady=10,
             bg=MATERIAL_YOU["surface"],
             fg=MATERIAL_YOU["text"],
             insertbackground=MATERIAL_YOU["text"],
-            selectbackground=MATERIAL_YOU["primary"] + "60"
+            selectbackground=MATERIAL_YOU["primary"]  # Removed transparency
         )
         self.result_text.pack(fill=tk.BOTH, expand=True)
         
         # Configure text tags
-        self.result_text.tag_config("header", foreground=MATERIAL_YOU["primary"], font=('Roboto', 12, 'bold'))
+        self.result_text.tag_config("header", foreground=MATERIAL_YOU["primary"], font=('Helvetica', 12, 'bold'))
         self.result_text.tag_config("error", foreground=MATERIAL_YOU["error"])
         self.result_text.tag_config("warning", foreground=MATERIAL_YOU["warning"])
         self.result_text.tag_config("success", foreground=MATERIAL_YOU["success"])
@@ -172,7 +162,7 @@ class LogSeekerApp:
             textvariable=self.status_var,
             relief=tk.FLAT,
             anchor=tk.W,
-            font=('Roboto', 9),
+            font=('Helvetica', 9),
             foreground=MATERIAL_YOU["secondary"]
         )
         status_bar.pack(fill=tk.X, pady=(5, 0))
@@ -309,7 +299,7 @@ class LogSeekerApp:
         self.status_var.set(f"📊 Found {len(errors)} errors, {len(warnings)} warnings")
     
     def copy_to_clipboard(self):
-        """Copy results to clipboard without pyperclip"""
+        """Copy results to clipboard"""
         if not self.current_results:
             messagebox.showwarning("No Results", "Nothing to copy.")
             return
