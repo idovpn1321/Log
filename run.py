@@ -2,6 +2,7 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import filedialog
 import os
+from tkinter import messagebox
 
 # ====================== ERROR DETECTION KEYWORDS ======================
 ERROR_KEYWORDS = [
@@ -17,6 +18,11 @@ def browse_file():
     if filepath:
         file_entry.delete(0, ttk.END)
         file_entry.insert(0, filepath)
+
+def clear_result():
+    result_text.config(state=ttk.NORMAL)
+    result_text.delete("1.0", ttk.END)
+    result_text.config(state=ttk.DISABLED)
 
 def scan_log():
     filepath = file_entry.get()
@@ -35,16 +41,20 @@ def scan_log():
     result_text.config(state=ttk.NORMAL)
     result_text.delete("1.0", ttk.END)
 
-    found = False
+    found_lines = []
     for i, line in enumerate(lines, 1):
         if any(err_kw in line.lower() for err_kw in ERROR_KEYWORDS):
-            result_text.insert(ttk.END, f"[Line {i}] {line}", "highlight")
-            found = True
+            found_lines.append(f"[Line {i}] {line}")
 
-    if not found:
+    if found_lines:
+        for line in found_lines:
+            result_text.insert(ttk.END, line, "highlight")
+        result_text.insert(ttk.END, f"\nTotal errors found: {len(found_lines)}", "summary")
+    else:
         result_text.insert(ttk.END, "No error-related patterns found.")
 
     result_text.tag_config("highlight", foreground="red")
+    result_text.tag_config("summary", foreground="blue", font=("JetBrains Mono", 9, "bold"))
     result_text.config(state=ttk.DISABLED)
 
 def toggle_theme():
@@ -74,6 +84,9 @@ browse_btn.grid(row=0, column=2)
 scan_btn = ttk.Button(top_frame, text="Scan Errors", command=scan_log, bootstyle="danger")
 scan_btn.grid(row=1, column=1, pady=10, sticky="w")
 
+clear_btn = ttk.Button(top_frame, text="Clear Result", command=clear_result, bootstyle="secondary")
+clear_btn.grid(row=1, column=0, pady=10, sticky="w")
+
 theme_btn = ttk.Button(top_frame, text="🌙/☀️ Toggle Theme", command=toggle_theme, bootstyle="secondary")
 theme_btn.grid(row=1, column=2, padx=5)
 
@@ -99,6 +112,7 @@ def on_close():
     theme_btn.config(state=ttk.DISABLED)
     scan_btn.config(state=ttk.DISABLED)
     browse_btn.config(state=ttk.DISABLED)
+    clear_btn.config(state=ttk.DISABLED)
     app.destroy()
 
 app.protocol("WM_DELETE_WINDOW", on_close)
