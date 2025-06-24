@@ -34,7 +34,7 @@ cd Log
 ### 2. Run the App
 
 ```bash
-python3 run.py
+python3 run1.py
 ```
 
 > Make sure you're using **Python 3.6+**
