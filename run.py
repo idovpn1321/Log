@@ -1,3 +1,10 @@
+import tkinter as tk
+from tkinter import ttk, filedialog
+import tkinter.scrolledtext as scrolledtext
+from ttkbootstrap import Style
+import logging
+from datetime import datetime
+
 # ====================== ERROR DETECTION KEYWORDS ======================
 ERROR_KEYWORDS = [
     "fail", "error", "unable", "not found", "exception",
@@ -7,74 +14,176 @@ ERROR_KEYWORDS = [
     "crash", "corrupt", "invalid", "failed", "warning"
 ]
 
-# Add this at the beginning of your script (after imports)
-import logging
-from datetime import datetime
+class LogSeekerApp:
+    def __init__(self, root):
+        self.root = root
+        self.setup_ui()
+        self.setup_logging()
+        
+    def setup_logging(self):
+        """Configure logging for the application"""
+        logging.basicConfig(
+            filename='zuanlogseeker_errors.log',
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+        logging.info("Application started")
 
-# Configure logging
-logging.basicConfig(
-    filename='zuanlogseeker_errors.log',
-    level=logging.ERROR,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+    def setup_ui(self):
+        """Setup the main application UI"""
+        self.root.title("ZuanLogSeekr v3 - Universal Error Detector")
+        self.root.geometry("900x650")
+        self.style = Style(theme='darkly')
+        
+        # Main container
+        main_frame = ttk.Frame(self.root, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Top controls frame
+        control_frame = ttk.LabelFrame(main_frame, text="Controls", padding=10)
+        control_frame.pack(fill=tk.X, pady=5)
+        
+        # File selection
+        ttk.Label(control_frame, text="Log File:").grid(row=0, column=0, sticky=tk.W)
+        self.file_var = tk.StringVar()
+        file_entry = ttk.Entry(control_frame, textvariable=self.file_var, width=50)
+        file_entry.grid(row=0, column=1, padx=5)
+        
+        browse_btn = ttk.Button(
+            control_frame, 
+            text="Browse", 
+            command=self.browse_file,
+            bootstyle="primary-outline"
+        )
+        browse_btn.grid(row=0, column=2, padx=5)
+        
+        # Scan button
+        scan_btn = ttk.Button(
+            control_frame,
+            text="Scan Errors",
+            command=self.scan_log,
+            bootstyle="danger"
+        )
+        scan_btn.grid(row=0, column=3, padx=5)
+        
+        # Theme selection
+        ttk.Label(control_frame, text="Theme:").grid(row=1, column=0, sticky=tk.W, pady=(10,0))
+        self.theme_var = tk.StringVar(value='darkly')
+        theme_menu = ttk.OptionMenu(
+            control_frame,
+            self.theme_var,
+            'darkly',
+            *Style.theme_names(),
+            command=self.change_theme
+        )
+        theme_menu.grid(row=1, column=1, sticky=tk.W, pady=(10,0))
+        
+        # Results display
+        results_frame = ttk.LabelFrame(main_frame, text="Scan Results", padding=10)
+        results_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        self.result_text = scrolledtext.ScrolledText(
+            results_frame,
+            wrap=tk.WORD,
+            font=('Consolas', 10),
+            height=20
+        )
+        self.result_text.pack(fill=tk.BOTH, expand=True)
+        
+        # Configure text tags for styling
+        self.result_text.tag_config("header", foreground="#4fc3f7", font=('Consolas', 11, 'bold'))
+        self.result_text.tag_config("line_num", foreground="#ff7043")
+        self.result_text.tag_config("error", foreground="#ff5252")
+        self.result_text.tag_config("warning", foreground="#ffd740")
+        self.result_text.tag_config("summary", foreground="#69f0ae", font=('Consolas', 10, 'bold'))
+        
+        # Status bar
+        self.status_var = tk.StringVar(value="Ready")
+        status_bar = ttk.Label(
+            main_frame,
+            textvariable=self.status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W
+        )
+        status_bar.pack(fill=tk.X, pady=(5,0))
+        
+    def browse_file(self):
+        """Open file dialog to select log file"""
+        filepath = filedialog.askopenfilename(
+            title="Select Log File",
+            filetypes=(("Log files", "*.log"), ("Text files", "*.txt"), ("All files", "*.*"))
+        )
+        if filepath:
+            self.file_var.set(filepath)
+            self.status_var.set(f"Selected: {filepath}")
+            logging.info(f"Selected file: {filepath}")
+    
+    def scan_log(self):
+        """Scan the log file for errors"""
+        filepath = self.file_var.get()
+        if not filepath:
+            ttk.dialogs.Messagebox.show_warning("Missing File", "Please select a valid log file.")
+            logging.warning("Scan attempted without file selection")
+            return
 
-def scan_log():
-    """Scan log file for errors and display results."""
-    filepath = file_var.get()
-    if not filepath:
-        ttk.dialogs.Messagebox.show_warning("Missing File", "Please select a valid log file.")
-        logging.warning("User attempted to scan without selecting a file")
-        return
+        try:
+            found_lines = []
+            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                for line_num, line in enumerate(f, 1):
+                    try:
+                        if any(err_kw in line.lower() for err_kw in ERROR_KEYWORDS):
+                            found_lines.append((line_num, line.strip()))
+                    except UnicodeDecodeError as ude:
+                        logging.error(f"Unicode decode error in line {line_num}: {ude}")
+                        continue
+                    except Exception as e:
+                        logging.error(f"Error processing line {line_num}: {e}")
+                        continue
 
-    try:
-        found_lines = []
-        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-            for line_num, line in enumerate(f, 1):
-                try:
-                    if any(err_kw in line.lower() for err_kw in ERROR_KEYWORDS):
-                        found_lines.append((line_num, line.strip()))
-                except UnicodeDecodeError as ude:
-                    logging.error(f"Unicode decode error in line {line_num}: {ude}")
-                    continue
-                except Exception as e:
-                    logging.error(f"Error processing line {line_num}: {e}")
-                    continue
+            self.result_text.delete(1.0, tk.END)
+            if found_lines:
+                self.result_text.insert(tk.END, f"Found {len(found_lines)} potential error(s):\n\n", "header")
+                for line_num, line in found_lines:
+                    # Determine if it's an error or warning
+                    tag = "error" if any(kw in line.lower() for kw in ["error", "fail", "fatal"]) else "warning"
+                    
+                    self.result_text.insert(tk.END, f"Line {line_num}: ", "line_num")
+                    self.result_text.insert(tk.END, f"{line}\n\n", tag)
+                
+                self.result_text.insert(tk.END, f"\nTotal issues found: {len(found_lines)}", "summary")
+                self.status_var.set(f"Scan complete. Found {len(found_lines)} issues.")
+                logging.info(f"Scan completed with {len(found_lines)} issues found in {filepath}")
+            else:
+                self.result_text.insert(tk.END, "No error-related patterns found.", "header")
+                self.status_var.set("Scan complete. No errors found.")
+                logging.info(f"Scan completed - no issues found in {filepath}")
 
-        result_text.delete(1.0, ttk.END)
-        if found_lines:
-            result_text.insert(ttk.END, f"Found {len(found_lines)} potential error(s):\n\n", "header")
-            for line_num, line in found_lines:
-                result_text.insert(ttk.END, f"Line {line_num}: ", "line_num")
-                result_text.insert(ttk.END, f"{line}\n\n")
-            result_text.insert(ttk.END, f"\nTotal errors found: {len(found_lines)}", "summary")
-            status_var.set(f"Scan complete. {len(found_lines)} error lines found.")
-            logging.info(f"Scan completed successfully with {len(found_lines)} errors found in {filepath}")
-        else:
-            result_text.insert(ttk.END, "No error-related patterns found.")
-            status_var.set("Scan complete. No errors found.")
-            logging.info(f"Scan completed - no errors found in {filepath}")
+        except FileNotFoundError:
+            error_msg = f"File not found: {filepath}"
+            ttk.dialogs.Messagebox.show_error("File Error", error_msg)
+            logging.error(error_msg)
+            self.status_var.set("Error: File not found")
+        except PermissionError:
+            error_msg = f"Permission denied when accessing: {filepath}"
+            ttk.dialogs.Messagebox.show_error("File Error", error_msg)
+            logging.error(error_msg)
+            self.status_var.set("Error: Permission denied")
+        except Exception as e:
+            error_msg = f"Unexpected error: {str(e)}"
+            ttk.dialogs.Messagebox.show_error("File Error", error_msg)
+            logging.error(error_msg, exc_info=True)
+            self.status_var.set("Error: Processing failed")
+    
+    def change_theme(self, theme):
+        """Change the application theme"""
+        try:
+            self.style.theme_use(theme)
+            logging.info(f"Theme changed to {theme}")
+        except Exception as e:
+            logging.error(f"Theme switch error: {e}", exc_info=True)
+            self.status_var.set("Theme change failed")
 
-    except FileNotFoundError:
-        error_msg = f"File not found: {filepath}"
-        ttk.dialogs.Messagebox.show_error("File Error", error_msg)
-        logging.error(error_msg)
-    except PermissionError:
-        error_msg = f"Permission denied when accessing: {filepath}"
-        ttk.dialogs.Messagebox.show_error("File Error", error_msg)
-        logging.error(error_msg)
-    except Exception as e:
-        error_msg = f"Unexpected error processing file: {str(e)}"
-        ttk.dialogs.Messagebox.show_error("File Error", error_msg)
-        logging.error(error_msg, exc_info=True)
-
-# Update your theme switching function:
-def change_theme():
-    try:
-        selected_theme = theme_var.get()
-        ttk.Style().theme_use(selected_theme)
-        logging.info(f"Theme changed to {selected_theme}")
-    except Exception as e:
-        error_msg = f"Theme switch error: {e}"
-        logging.error(error_msg, exc_info=True)
-        # Optionally show this to user if you want:
-        # ttk.dialogs.Messagebox.show_warning("Theme Error", "Could not change theme")
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = LogSeekerApp(root)
+    root.mainloop()
