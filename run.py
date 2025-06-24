@@ -82,8 +82,7 @@ result_text = ttk.ScrolledText(app, wrap="word", font=("JetBrains Mono", 10))
 result_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 result_text.config(state=ttk.DISABLED)
 
-# ====================== MAINLOOP ======================
-# Patch style.theme_use to safely switch themes without triggering event on dead windows
+# ====================== PATCH THEME SWITCH ======================
 original_theme_use = style.theme_use
 
 def safe_theme_use(new_theme):
@@ -95,4 +94,14 @@ def safe_theme_use(new_theme):
 
 style.theme_use = safe_theme_use
 
+# ====================== CLEAN EXIT ======================
+def on_close():
+    theme_btn.config(state=ttk.DISABLED)
+    scan_btn.config(state=ttk.DISABLED)
+    browse_btn.config(state=ttk.DISABLED)
+    app.destroy()
+
+app.protocol("WM_DELETE_WINDOW", on_close)
+
+# ====================== MAINLOOP ======================
 app.mainloop()
