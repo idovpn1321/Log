@@ -5,18 +5,17 @@ from ttkbootstrap import Style
 import logging
 from datetime import datetime
 import re
-import pyperclip  # Untuk copy ke clipboard
 
-# ====================== SETUP MATERIAL YOU THEME ======================
-MATERIAL_YOU_THEME = {
+# ====================== MATERIAL YOU THEME COLORS ======================
+MATERIAL_YOU = {
     "primary": "#6750A4",
-    "secondary": "#958DA5",
+    "surface": "#2D2B36",
+    "background": "#1C1B1F",
     "error": "#F2B8B5",
     "warning": "#FFD8B2",
     "success": "#B8E1B8",
-    "background": "#1C1B1F",
-    "surface": "#2D2B36",
     "text": "#E6E1E5",
+    "secondary": "#958DA5"
 }
 
 class LogSeekerApp:
@@ -25,31 +24,51 @@ class LogSeekerApp:
         self.setup_theme()
         self.setup_logging()
         self.setup_ui()
-        self.scan_mode = "log"  # Default: 'log' or 'code'
+        self.scan_mode = "log"
         self.current_results = []
         
     def setup_theme(self):
-        """Apply Material You theme colors"""
+        """Configure Material You theme"""
         self.style = Style(theme="darkly")
-        self.style.configure("TFrame", background=MATERIAL_YOU_THEME["background"])
-        self.style.configure("TLabel", background=MATERIAL_YOU_THEME["background"], foreground=MATERIAL_YOU_THEME["text"])
-        self.style.configure("TButton", background=MATERIAL_YOU_THEME["primary"], foreground="white", font=('Roboto', 10))
-        self.style.configure("TEntry", fieldbackground=MATERIAL_YOU_THEME["surface"], foreground=MATERIAL_YOU_THEME["text"])
-        self.style.configure("TCombobox", fieldbackground=MATERIAL_YOU_THEME["surface"])
-        self.style.configure("TScrollbar", background=MATERIAL_YOU_THEME["surface"])
+        self.style.configure(".", font=('Roboto', 10))
         
+        # Apply colors
+        self.root.configure(bg=MATERIAL_YOU["background"])
+        self.style.configure(
+            "TFrame", 
+            background=MATERIAL_YOU["background"],
+            relief="flat"
+        )
+        self.style.configure(
+            "TLabel", 
+            background=MATERIAL_YOU["background"],
+            foreground=MATERIAL_YOU["text"]
+        )
+        self.style.configure(
+            "TButton", 
+            background=MATERIAL_YOU["primary"],
+            foreground="white",
+            bordercolor=MATERIAL_YOU["primary"],
+            focuscolor=MATERIAL_YOU["primary"] + "30"  # Add transparency
+        )
+        self.style.map(
+            "TButton",
+            background=[("active", MATERIAL_YOU["primary"] + "DD")],
+            bordercolor=[("active", MATERIAL_YOU["primary"] + "DD")]
+        )
+
     def setup_logging(self):
-        """Configure logging"""
+        """Setup logging configuration"""
         logging.basicConfig(
-            filename='zuanlogseeker_errors.log',
+            filename='zuanlogseeker.log',
             level=logging.INFO,
             format='%(asctime)s - %(levelname)s - %(message)s',
             encoding='utf-8'
         )
-        logging.info("ZuanLogSeekr v4 started")
+        logging.info("Application started")
 
     def setup_ui(self):
-        """Setup the modern UI"""
+        """Setup user interface"""
         self.root.title("ZuanLogSeekr v4")
         self.root.geometry("1000x700")
         self.root.minsize(800, 600)
@@ -60,30 +79,35 @@ class LogSeekerApp:
         
         # Header
         header_frame = ttk.Frame(main_frame)
-        header_frame.pack(fill=tk.X, pady=5)
+        header_frame.pack(fill=tk.X, pady=(0, 10))
         
         ttk.Label(
             header_frame,
             text="ZuanLogSeekr",
             font=('Roboto', 18, 'bold'),
-            foreground=MATERIAL_YOU_THEME["primary"]
+            foreground=MATERIAL_YOU["primary"]
         ).pack(side=tk.LEFT, padx=10)
         
-        # Controls
+        # Control panel
         control_frame = ttk.Frame(main_frame)
         control_frame.pack(fill=tk.X, pady=10)
         
         # File selection
         ttk.Label(control_frame, text="File:").grid(row=0, column=0, padx=5, sticky=tk.W)
         self.file_var = tk.StringVar()
-        file_entry = ttk.Entry(control_frame, textvariable=self.file_var, width=60)
+        file_entry = ttk.Entry(
+            control_frame, 
+            textvariable=self.file_var, 
+            width=60,
+            style='TEntry'
+        )
         file_entry.grid(row=0, column=1, padx=5, sticky=tk.W)
         
         browse_btn = ttk.Button(
             control_frame,
             text="📁 Browse",
             command=self.browse_file,
-            style='primary.TButton'
+            style='TButton'
         )
         browse_btn.grid(row=0, column=2, padx=5)
         
@@ -99,21 +123,20 @@ class LogSeekerApp:
         )
         mode_menu.grid(row=0, column=4, padx=5)
         
-        # Scan button
+        # Action buttons
         scan_btn = ttk.Button(
             control_frame,
             text="🔍 Scan",
             command=self.scan_file,
-            style='primary.TButton'
+            style='TButton'
         )
         scan_btn.grid(row=0, column=5, padx=5)
         
-        # Copy button
         self.copy_btn = ttk.Button(
             control_frame,
             text="📋 Copy",
-            command=self.copy_errors,
-            style='info.TButton',
+            command=self.copy_to_clipboard,
+            style='TButton',
             state='disabled'
         )
         self.copy_btn.grid(row=0, column=6, padx=5)
@@ -129,17 +152,18 @@ class LogSeekerApp:
             height=25,
             padx=10,
             pady=10,
-            bg=MATERIAL_YOU_THEME["surface"],
-            fg=MATERIAL_YOU_THEME["text"],
-            insertbackground=MATERIAL_YOU_THEME["text"]
+            bg=MATERIAL_YOU["surface"],
+            fg=MATERIAL_YOU["text"],
+            insertbackground=MATERIAL_YOU["text"],
+            selectbackground=MATERIAL_YOU["primary"] + "60"
         )
         self.result_text.pack(fill=tk.BOTH, expand=True)
         
-        # Configure text tags for styling
-        self.result_text.tag_config("header", foreground=MATERIAL_YOU_THEME["primary"], font=('Roboto', 12, 'bold'))
-        self.result_text.tag_config("error", foreground=MATERIAL_YOU_THEME["error"])
-        self.result_text.tag_config("warning", foreground=MATERIAL_YOU_THEME["warning"])
-        self.result_text.tag_config("success", foreground=MATERIAL_YOU_THEME["success"])
+        # Configure text tags
+        self.result_text.tag_config("header", foreground=MATERIAL_YOU["primary"], font=('Roboto', 12, 'bold'))
+        self.result_text.tag_config("error", foreground=MATERIAL_YOU["error"])
+        self.result_text.tag_config("warning", foreground=MATERIAL_YOU["warning"])
+        self.result_text.tag_config("success", foreground=MATERIAL_YOU["success"])
         
         # Status bar
         self.status_var = tk.StringVar(value="🚀 Ready to scan")
@@ -149,7 +173,7 @@ class LogSeekerApp:
             relief=tk.FLAT,
             anchor=tk.W,
             font=('Roboto', 9),
-            foreground=MATERIAL_YOU_THEME["secondary"]
+            foreground=MATERIAL_YOU["secondary"]
         )
         status_bar.pack(fill=tk.X, pady=(5, 0))
     
@@ -157,12 +181,16 @@ class LogSeekerApp:
         """Open file dialog"""
         filepath = filedialog.askopenfilename(
             title="Select File",
-            filetypes=[("Logs", "*.log"), ("Code", "*.py"), ("Text", "*.txt"), ("All Files", "*.*")]
+            filetypes=[
+                ("Log Files", "*.log"),
+                ("Python Files", "*.py"),
+                ("Text Files", "*.txt"),
+                ("All Files", "*.*")
+            ]
         )
         if filepath:
             self.file_var.set(filepath)
             self.status_var.set(f"📂 Selected: {filepath}")
-            # Auto-set mode based on file extension
             if filepath.endswith('.py'):
                 self.mode_var.set('code')
             else:
@@ -172,7 +200,7 @@ class LogSeekerApp:
         """Scan the selected file"""
         filepath = self.file_var.get()
         if not filepath:
-            messagebox.showwarning("⚠️ Missing File", "Please select a file first.")
+            messagebox.showwarning("Missing File", "Please select a file first.")
             return
         
         try:
@@ -199,78 +227,68 @@ class LogSeekerApp:
             self._handle_error(f"❌ Error: {str(e)}")
     
     def _scan_log_line(self, line, line_num):
-        """Scan log lines for errors"""
+        """Scan log file lines"""
         issues = []
         line_lower = line.lower()
         
-        error_patterns = [
-            r'\berror\b', r'\bfail(?:ed|ure)?\b', r'\bfatal\b',
-            r'\bcrash\b', r'\bexception\b', r'\btimeout\b'
-        ]
+        error_kws = ["error", "fail", "fatal", "crash", "exception", "timeout"]
+        warning_kws = ["warn", "unable", "cannot", "denied", "not found"]
         
-        warning_patterns = [
-            r'\bwarn(?:ing)?\b', r'\bunable\b', r'\bcannot\b',
-            r'\bdenied\b', r'\bnot found\b'
-        ]
-        
-        for pattern in error_patterns:
-            if re.search(pattern, line_lower):
-                issues.append((line_num, line, "error"))
-                break
-        
-        if not issues:
-            for pattern in warning_patterns:
-                if re.search(pattern, line_lower):
-                    issues.append((line_num, line, "warning"))
-                    break
+        if any(kw in line_lower for kw in error_kws):
+            issues.append((line_num, line, "error"))
+        elif any(kw in line_lower for kw in warning_kws):
+            issues.append((line_num, line, "warning"))
         
         return issues
     
     def _scan_code_line(self, line, line_num):
-        """Scan code lines for issues (without false positives)"""
+        """Scan source code lines"""
         issues = []
         stripped_line = line.strip()
+        
+        # Skip comments and empty lines
         if not stripped_line or stripped_line.startswith(('#', '"', "'")):
             return issues
-        
+            
         line_lower = stripped_line.lower()
         
-        # Only detect real code issues, not variable declarations
+        # Error patterns
         error_patterns = [
             r'except\s*:',  # Bare except
-            r'print\s*\(',  # Leftover debug prints
-            r'assert\s+True',  # Useless assert
-            r'==\s*None'  # Should use 'is None'
+            r'print\s*\(',  # Debug prints
+            r'==\s*None',   # Should use 'is None'
+            r'\bpass\b'     # Empty blocks
         ]
         
+        # Warning patterns
         warning_patterns = [
             r'if\s+.*==\s*True',  # Redundant comparison
-            r'while\s+True\s*:',  # Infinite loop
-            r'len\s*\(.*\)\s*>\s*0'  # Should use truthiness check
+            r'while\s+True\s*:',   # Infinite loop
+            r'len\s*\(.*\)\s*>\s*0'  # Truthiness check
         ]
         
         for pattern in error_patterns:
             if re.search(pattern, line_lower):
                 issues.append((line_num, stripped_line, "error"))
                 break
-        
+                
         if not issues:
             for pattern in warning_patterns:
                 if re.search(pattern, line_lower):
                     issues.append((line_num, stripped_line, "warning"))
                     break
-        
+                    
         return issues
     
     def _display_results(self, found_lines, filepath):
-        """Display results in a clean format"""
+        """Display scan results"""
         self.result_text.delete(1.0, tk.END)
         
         if not found_lines:
             self.result_text.insert(tk.END, f"✅ No issues found in:\n{filepath}\n", "success")
             self.status_var.set("✅ Scan complete - No issues found")
             return
-        
+            
         errors = [x for x in found_lines if x[2] == "error"]
         warnings = [x for x in found_lines if x[2] == "warning"]
         
@@ -290,21 +308,26 @@ class LogSeekerApp:
         
         self.status_var.set(f"📊 Found {len(errors)} errors, {len(warnings)} warnings")
     
-    def copy_errors(self):
-        """Copy results to clipboard"""
+    def copy_to_clipboard(self):
+        """Copy results to clipboard without pyperclip"""
         if not self.current_results:
-            messagebox.showwarning("⚠️ No Results", "Nothing to copy.")
+            messagebox.showwarning("No Results", "Nothing to copy.")
             return
-        
+            
         copy_text = "ZuanLogSeekr Results:\n\n"
         for line_num, line, issue_type in self.current_results:
             copy_text += f"[{issue_type.upper()}] Line {line_num}: {line}\n"
         
-        pyperclip.copy(copy_text)
+        # Copy to clipboard using tkinter
+        self.root.clipboard_clear()
+        self.root.clipboard_append(copy_text)
+        self.root.update()  # Required to finalize the clipboard
+        
         self.status_var.set("📋 Copied to clipboard!")
+        messagebox.showinfo("Copied", "Results copied to clipboard!")
     
     def _handle_error(self, error_msg):
-        """Show error messages cleanly"""
+        """Handle and display errors"""
         messagebox.showerror("Error", error_msg)
         self.status_var.set(error_msg)
         self.result_text.delete(1.0, tk.END)
