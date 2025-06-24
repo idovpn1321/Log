@@ -18,11 +18,13 @@ def browse_file():
     if filepath:
         file_entry.delete(0, ttk.END)
         file_entry.insert(0, filepath)
+        status_var.set(f"Opened: {os.path.basename(filepath)}")
 
 def clear_result():
     result_text.config(state=ttk.NORMAL)
     result_text.delete("1.0", ttk.END)
     result_text.config(state=ttk.DISABLED)
+    status_var.set("Result cleared.")
 
 def scan_log():
     filepath = file_entry.get()
@@ -50,8 +52,10 @@ def scan_log():
         for line in found_lines:
             result_text.insert(ttk.END, line, "highlight")
         result_text.insert(ttk.END, f"\nTotal errors found: {len(found_lines)}", "summary")
+        status_var.set(f"Scan complete. {len(found_lines)} error lines found.")
     else:
         result_text.insert(ttk.END, "No error-related patterns found.")
+        status_var.set("Scan complete. No errors found.")
 
     result_text.tag_config("highlight", foreground="red")
     result_text.tag_config("summary", foreground="blue", font=("JetBrains Mono", 9, "bold"))
@@ -60,6 +64,7 @@ def scan_log():
 def toggle_theme():
     new_theme = "darkly" if style.theme.name == "flatly" else "flatly"
     style.theme_use(new_theme)
+    status_var.set(f"Theme switched to {new_theme} mode.")
 
 # ====================== GUI SETUP ======================
 style = ttk.Style("flatly")
@@ -92,8 +97,13 @@ theme_btn.grid(row=1, column=2, padx=5)
 
 # ==== RESULT TEXT ====
 result_text = ttk.ScrolledText(app, wrap="word", font=("JetBrains Mono", 10))
-result_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+result_text.pack(fill="both", expand=True, padx=10, pady=(0, 0))
 result_text.config(state=ttk.DISABLED)
+
+# ==== STATUS BAR ====
+status_var = ttk.StringVar(value="Ready.")
+status_bar = ttk.Label(app, textvariable=status_var, anchor="w", padding=5, bootstyle="secondary")
+status_bar.pack(fill=ttk.X, side=ttk.BOTTOM)
 
 # ====================== PATCH THEME SWITCH ======================
 original_theme_use = style.theme_use
