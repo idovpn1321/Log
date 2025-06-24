@@ -79,4 +79,9 @@ result_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 result_text.config(state=ttk.DISABLED)
 
 # ====================== RUN ======================
+def on_close():
+    theme_toggle.config(state=ttk.DISABLED)
+    app.destroy()
+
+app.protocol("WM_DELETE_WINDOW", on_close)
 app.mainloop()
