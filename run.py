@@ -6,7 +6,7 @@ import os
 def browse_file():
     filepath = filedialog.askopenfilename()
     if filepath:
-        file_entry.delete(0, tk.END)
+        file_entry.delete(0, ttk.END)
         file_entry.insert(0, filepath)
 
 def search_string():
