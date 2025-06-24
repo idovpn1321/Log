@@ -48,8 +48,13 @@ def scan_log():
     result_text.config(state=ttk.DISABLED)
 
 def toggle_theme():
-    new_theme = "darkly" if style.theme.name == "flatly" else "flatly"
-    style.theme_use(new_theme)
+    try:
+        if not app.winfo_exists():
+            return  # Jangan ganti tema kalau window udah destroyed
+        new_theme = "darkly" if style.theme.name == "flatly" else "flatly"
+        style.theme_use(new_theme)
+    except Exception as e:
+        print("Theme switch error:", e)
 
 # ====================== GUI SETUP ======================
 style = ttk.Style("flatly")
@@ -83,4 +88,12 @@ result_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 result_text.config(state=ttk.DISABLED)
 
 # ====================== MAINLOOP ======================
+def on_close():
+    theme_btn.config(state=ttk.DISABLED)
+    scan_btn.config(state=ttk.DISABLED)
+    browse_btn.config(state=ttk.DISABLED)
+    app.destroy()
+
+app.protocol("WM_DELETE_WINDOW", on_close)
+
 app.mainloop()
