@@ -1,132 +1,112 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-import tkinter.scrolledtext as scrolledtext
-from ttkbootstrap import Style
+from tkinter import ttk, filedialog, messagebox, scrolledtext
 import logging
+import os
 from datetime import datetime
 import re
 
-# ====================== MATERIAL YOU THEME COLORS ======================
-MATERIAL_YOU = {
-    "primary": "#6750A4",
-    "surface": "#2D2B36",
-    "background": "#1C1B1F",
-    "error": "#F2B8B5",
-    "warning": "#FFD8B2",
-    "success": "#B8E1B8",
-    "text": "#E6E1E5",
-    "secondary": "#958DA5"
+# ====================== ENHANCED DETECTION CATEGORIES ======================
+DETECTION_LEVELS = {
+    "ERROR": {
+        "color": "#FF5252",
+        "keywords": ["error", "fail", "fatal", "crash", "exception", "timeout"],
+        "patterns": [r"\berror\b", r"\bfail(?:ed|ure)?\b", r"\bfatal\b"]
+    },
+    "WARNING": {
+        "color": "#FFD740",
+        "keywords": ["warn", "unable", "cannot", "denied", "not found"],
+        "patterns": [r"\bwarn(?:ing)?\b", r"\bcannot\b"]
+    },
+    "CODE_SMELL": {
+        "color": "#FFAB91",
+        "keywords": ["print(", "pass", "TODO", "FIXME"],
+        "patterns": [r"print\s*\(", r"\bpass\b", r"\bTODO\b", r"\bFIXME\b"]
+    },
+    "RECOMMENDATION": {
+        "color": "#80DEEA",
+        "keywords": ["should", "recommend", "better", "improve"],
+        "patterns": [r"\bshould\b", r"\brecommend\b", r"\bimprove\b"]
+    }
 }
 
-class LogSeekerApp:
+class EnhancedLogSeeker:
     def __init__(self, root):
         self.root = root
-        self.setup_theme()
-        self.setup_logging()
         self.setup_ui()
-        self.scan_mode = "log"
+        self.setup_logging()
+        self.current_file = ""
         self.current_results = []
         
-    def setup_theme(self):
-        """Configure Material You theme"""
-        self.style = Style(theme="darkly")
-        self.style.configure(".", font=('Helvetica', 10))
-        
-        # Apply colors
-        self.root.configure(bg=MATERIAL_YOU["background"])
-        self.style.configure(
-            "TFrame", 
-            background=MATERIAL_YOU["background"],
-            relief="flat"
-        )
-        self.style.configure(
-            "TLabel", 
-            background=MATERIAL_YOU["background"],
-            foreground=MATERIAL_YOU["text"]
-        )
-        self.style.configure(
-            "TButton", 
-            background=MATERIAL_YOU["primary"],
-            foreground="white",
-            bordercolor=MATERIAL_YOU["primary"]
-        )
+        # Windows-specific adjustments
+        if os.name == 'nt':
+            try:
+                self.root.iconbitmap(default='icon.ico')
+            except:
+                pass
 
     def setup_logging(self):
-        """Setup logging configuration"""
+        """Configure logging"""
+        log_dir = os.path.join(os.environ.get('APPDATA', ''), 'EnhancedLogSeeker')
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+            
         logging.basicConfig(
-            filename='zuanlogseeker.log',
+            filename=os.path.join(log_dir, 'app.log'),
             level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            encoding='utf-8'
+            format='%(asctime)s - %(levelname)s - %(message)s'
         )
-        logging.info("Application started")
+        logging.info("Enhanced Log Seeker started")
 
     def setup_ui(self):
-        """Setup user interface"""
-        self.root.title("ZuanLogSeekr v4")
+        """Enhanced UI with multi-level detection"""
+        self.root.title("Enhanced Log Seeker v2.0")
         self.root.geometry("1000x700")
-        self.root.minsize(800, 600)
         
         # Main container
         main_frame = ttk.Frame(self.root, padding=10)
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Header
-        header_frame = ttk.Frame(main_frame)
-        header_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        ttk.Label(
-            header_frame,
-            text="ZuanLogSeekr",
-            font=('Helvetica', 18, 'bold'),
-            foreground=MATERIAL_YOU["primary"]
-        ).pack(side=tk.LEFT, padx=10)
-        
         # Control panel
         control_frame = ttk.Frame(main_frame)
-        control_frame.pack(fill=tk.X, pady=10)
+        control_frame.pack(fill=tk.X, pady=5)
         
         # File selection
         ttk.Label(control_frame, text="File:").grid(row=0, column=0, padx=5, sticky=tk.W)
         self.file_var = tk.StringVar()
-        file_entry = ttk.Entry(
-            control_frame, 
-            textvariable=self.file_var, 
-            width=60
-        )
-        file_entry.grid(row=0, column=1, padx=5, sticky=tk.W)
+        file_entry = ttk.Entry(control_frame, textvariable=self.file_var, width=60)
+        file_entry.grid(row=0, column=1, padx=5)
         
         browse_btn = ttk.Button(
-            control_frame,
-            text="📁 Browse",
+            control_frame, 
+            text="Browse", 
             command=self.browse_file
         )
         browse_btn.grid(row=0, column=2, padx=5)
         
-        # Scan mode
-        ttk.Label(control_frame, text="Mode:").grid(row=0, column=3, padx=5, sticky=tk.W)
-        self.mode_var = tk.StringVar(value='log')
-        mode_menu = ttk.Combobox(
+        # Detection level filter
+        ttk.Label(control_frame, text="Filter:").grid(row=0, column=3, padx=5, sticky=tk.W)
+        self.filter_var = tk.StringVar(value="ALL")
+        filter_menu = ttk.Combobox(
             control_frame,
-            textvariable=self.mode_var,
-            values=['log', 'code'],
-            state='readonly',
-            width=8
+            textvariable=self.filter_var,
+            values=["ALL"] + list(DETECTION_LEVELS.keys()),
+            state="readonly",
+            width=12
         )
-        mode_menu.grid(row=0, column=4, padx=5)
+        filter_menu.grid(row=0, column=4, padx=5)
         
         # Action buttons
         scan_btn = ttk.Button(
             control_frame,
-            text="🔍 Scan",
-            command=self.scan_file
+            text="Analyze",
+            command=self.analyze_file
         )
         scan_btn.grid(row=0, column=5, padx=5)
         
         self.copy_btn = ttk.Button(
             control_frame,
-            text="📋 Copy",
-            command=self.copy_to_clipboard,
+            text="Export Results",
+            command=self.export_results,
             state='disabled'
         )
         self.copy_btn.grid(row=0, column=6, padx=5)
@@ -138,34 +118,32 @@ class LogSeekerApp:
         self.result_text = scrolledtext.ScrolledText(
             results_frame,
             wrap=tk.WORD,
-            font=('Courier New', 10),
+            font=('Consolas', 10),
             height=25,
             padx=10,
-            pady=10,
-            bg=MATERIAL_YOU["surface"],
-            fg=MATERIAL_YOU["text"],
-            insertbackground=MATERIAL_YOU["text"],
-            selectbackground=MATERIAL_YOU["primary"]  # Removed transparency
+            pady=10
         )
         self.result_text.pack(fill=tk.BOTH, expand=True)
         
         # Configure text tags
-        self.result_text.tag_config("header", foreground=MATERIAL_YOU["primary"], font=('Helvetica', 12, 'bold'))
-        self.result_text.tag_config("error", foreground=MATERIAL_YOU["error"])
-        self.result_text.tag_config("warning", foreground=MATERIAL_YOU["warning"])
-        self.result_text.tag_config("success", foreground=MATERIAL_YOU["success"])
+        for level, config in DETECTION_LEVELS.items():
+            self.result_text.tag_config(
+                level,
+                foreground=config["color"],
+                font=('Consolas', 10, 'bold')
+            )
+        
+        self.result_text.tag_config("HEADER", foreground="#0078D4", font=('Segoe UI', 12, 'bold'))
         
         # Status bar
-        self.status_var = tk.StringVar(value="🚀 Ready to scan")
+        self.status_var = tk.StringVar(value="Ready to analyze files")
         status_bar = ttk.Label(
             main_frame,
             textvariable=self.status_var,
-            relief=tk.FLAT,
-            anchor=tk.W,
-            font=('Helvetica', 9),
-            foreground=MATERIAL_YOU["secondary"]
+            relief=tk.SUNKEN,
+            anchor=tk.W
         )
-        status_bar.pack(fill=tk.X, pady=(5, 0))
+        status_bar.pack(fill=tk.X, pady=(5,0))
     
     def browse_file(self):
         """Open file dialog"""
@@ -180,151 +158,140 @@ class LogSeekerApp:
         )
         if filepath:
             self.file_var.set(filepath)
-            self.status_var.set(f"📂 Selected: {filepath}")
-            if filepath.endswith('.py'):
-                self.mode_var.set('code')
-            else:
-                self.mode_var.set('log')
+            self.current_file = filepath
+            self.status_var.set(f"Selected: {os.path.basename(filepath)}")
     
-    def scan_file(self):
-        """Scan the selected file"""
+    def analyze_file(self):
+        """Enhanced analysis with multi-level detection"""
         filepath = self.file_var.get()
         if not filepath:
             messagebox.showwarning("Missing File", "Please select a file first.")
             return
         
         try:
-            found_lines = []
+            self.current_results = []
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                 for line_num, line in enumerate(f, 1):
                     stripped_line = line.strip()
                     if not stripped_line:
                         continue
                     
-                    if self.mode_var.get() == 'log':
-                        issues = self._scan_log_line(stripped_line, line_num)
-                    else:
-                        issues = self._scan_code_line(stripped_line, line_num)
-                    
-                    if issues:
-                        found_lines.extend(issues)
+                    detected_issues = self.detect_issues(stripped_line, line_num)
+                    if detected_issues:
+                        self.current_results.extend(detected_issues)
             
-            self.current_results = found_lines
-            self._display_results(found_lines, filepath)
-            self.copy_btn['state'] = 'normal' if found_lines else 'disabled'
+            self.display_results()
+            self.copy_btn['state'] = 'normal'
         
         except Exception as e:
-            self._handle_error(f"❌ Error: {str(e)}")
+            self.handle_error(f"Analysis error: {str(e)}")
     
-    def _scan_log_line(self, line, line_num):
-        """Scan log file lines"""
+    def detect_issues(self, line, line_num):
+        """Multi-level issue detection"""
         issues = []
         line_lower = line.lower()
         
-        error_kws = ["error", "fail", "fatal", "crash", "exception", "timeout"]
-        warning_kws = ["warn", "unable", "cannot", "denied", "not found"]
-        
-        if any(kw in line_lower for kw in error_kws):
-            issues.append((line_num, line, "error"))
-        elif any(kw in line_lower for kw in warning_kws):
-            issues.append((line_num, line, "warning"))
-        
-        return issues
-    
-    def _scan_code_line(self, line, line_num):
-        """Scan source code lines"""
-        issues = []
-        stripped_line = line.strip()
-        
-        # Skip comments and empty lines
-        if not stripped_line or stripped_line.startswith(('#', '"', "'")):
-            return issues
+        for level, config in DETECTION_LEVELS.items():
+            # Check both keywords and patterns
+            keyword_match = any(kw in line_lower for kw in config["keywords"])
+            pattern_match = any(re.search(ptn, line_lower) for ptn in config["patterns"])
             
-        line_lower = stripped_line.lower()
+            if keyword_match or pattern_match:
+                issues.append({
+                    "line_num": line_num,
+                    "line": line,
+                    "level": level,
+                    "message": self.generate_message(level, line)
+                })
         
-        # Error patterns
-        error_patterns = [
-            r'except\s*:',  # Bare except
-            r'print\s*\(',  # Debug prints
-            r'==\s*None',   # Should use 'is None'
-            r'\bpass\b'     # Empty blocks
-        ]
-        
-        # Warning patterns
-        warning_patterns = [
-            r'if\s+.*==\s*True',  # Redundant comparison
-            r'while\s+True\s*:',   # Infinite loop
-            r'len\s*\(.*\)\s*>\s*0'  # Truthiness check
-        ]
-        
-        for pattern in error_patterns:
-            if re.search(pattern, line_lower):
-                issues.append((line_num, stripped_line, "error"))
-                break
-                
-        if not issues:
-            for pattern in warning_patterns:
-                if re.search(pattern, line_lower):
-                    issues.append((line_num, stripped_line, "warning"))
-                    break
-                    
         return issues
     
-    def _display_results(self, found_lines, filepath):
-        """Display scan results"""
+    def generate_message(self, level, line):
+        """Generate helpful messages for each detection level"""
+        messages = {
+            "ERROR": "This needs immediate attention",
+            "WARNING": "This might cause problems",
+            "CODE_SMELL": "This could be improved",
+            "RECOMMENDATION": "Consider making this change"
+        }
+        return messages.get(level, "Found potential issue")
+    
+    def display_results(self):
+        """Display filtered results"""
         self.result_text.delete(1.0, tk.END)
         
-        if not found_lines:
-            self.result_text.insert(tk.END, f"✅ No issues found in:\n{filepath}\n", "success")
-            self.status_var.set("✅ Scan complete - No issues found")
-            return
-            
-        errors = [x for x in found_lines if x[2] == "error"]
-        warnings = [x for x in found_lines if x[2] == "warning"]
-        
-        self.result_text.insert(tk.END, f"🔍 Scan Results for:\n{filepath}\n\n", "header")
-        
-        if errors:
-            self.result_text.insert(tk.END, "🚨 Errors:\n", "header")
-            for line_num, line, _ in errors:
-                self.result_text.insert(tk.END, f"  L{line_num}: ", "header")
-                self.result_text.insert(tk.END, f"{line}\n", "error")
-        
-        if warnings:
-            self.result_text.insert(tk.END, "\n⚠️ Warnings:\n", "header")
-            for line_num, line, _ in warnings:
-                self.result_text.insert(tk.END, f"  L{line_num}: ", "header")
-                self.result_text.insert(tk.END, f"{line}\n", "warning")
-        
-        self.status_var.set(f"📊 Found {len(errors)} errors, {len(warnings)} warnings")
-    
-    def copy_to_clipboard(self):
-        """Copy results to clipboard"""
         if not self.current_results:
-            messagebox.showwarning("No Results", "Nothing to copy.")
+            self.result_text.insert(tk.END, "No issues found in the file", "HEADER")
+            self.status_var.set("Analysis complete - No issues found")
             return
-            
-        copy_text = "ZuanLogSeekr Results:\n\n"
-        for line_num, line, issue_type in self.current_results:
-            copy_text += f"[{issue_type.upper()}] Line {line_num}: {line}\n"
         
-        # Copy to clipboard using tkinter
-        self.root.clipboard_clear()
-        self.root.clipboard_append(copy_text)
-        self.root.update()  # Required to finalize the clipboard
+        filter_level = self.filter_var.get()
+        filtered_results = [
+            r for r in self.current_results 
+            if filter_level == "ALL" or r["level"] == filter_level
+        ]
         
-        self.status_var.set("📋 Copied to clipboard!")
-        messagebox.showinfo("Copied", "Results copied to clipboard!")
+        self.result_text.insert(tk.END, 
+            f"Analysis Results for: {os.path.basename(self.current_file)}\n\n", 
+            "HEADER")
+        
+        for issue in filtered_results:
+            self.result_text.insert(tk.END, 
+                f"[{issue['level']}] Line {issue['line_num']}: {issue['message']}\n",
+                issue["level"])
+            self.result_text.insert(tk.END, 
+                f"   {issue['line']}\n\n",
+                issue["level"])
+        
+        self.status_var.set(
+            f"Found {len(filtered_results)} issues ({len(self.current_results)} total)"
+        )
     
-    def _handle_error(self, error_msg):
-        """Handle and display errors"""
+    def export_results(self):
+        """Export results to clipboard or file"""
+        if not self.current_results:
+            messagebox.showwarning("No Results", "Nothing to export")
+            return
+        
+        export_text = f"Enhanced Log Seeker Report\nFile: {self.current_file}\n\n"
+        
+        for issue in self.current_results:
+            export_text += (
+                f"[{issue['level']}] Line {issue['line_num']}: {issue['message']}\n"
+                f"{issue['line']}\n\n"
+            )
+        
+        # Copy to clipboard
+        self.root.clipboard_clear()
+        self.root.clipboard_append(export_text)
+        
+        # Also save to file
+        save_path = os.path.join(
+            os.path.dirname(self.current_file),
+            f"analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        )
+        
+        try:
+            with open(save_path, 'w') as f:
+                f.write(export_text)
+            messagebox.showinfo(
+                "Export Complete", 
+                f"Results copied to clipboard and saved to:\n{save_path}"
+            )
+        except Exception as e:
+            messagebox.showinfo(
+                "Export Partial", 
+                f"Results copied to clipboard but couldn't save file:\n{str(e)}"
+            )
+    
+    def handle_error(self, error_msg):
+        """Error handling"""
         messagebox.showerror("Error", error_msg)
         self.status_var.set(error_msg)
         self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(tk.END, error_msg, "error")
-        self.copy_btn['state'] = 'disabled'
+        self.result_text.insert(tk.END, error_msg, "ERROR")
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = LogSeekerApp(root)
+    app = EnhancedLogSeeker(root)
     root.mainloop()
